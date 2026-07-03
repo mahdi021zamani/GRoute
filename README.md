@@ -26,7 +26,6 @@ A lightweight Android VPN client built on [Xray-core](https://github.com/XTLS/Xr
 - **Share & import** — copy or share any server or subscription as a link, and multi-select servers to copy, share, or delete in bulk.
 - **Xray logs** — view the engine's runtime logs inside the app.
 - **Data-usage history** — live session speed and total, plus hourly, daily, and custom date ranges.
-- **About** — shows the bundled Xray-core version, developer, and privacy policy.
 - **Bilingual** — full English and Persian UI with right-to-left support.
 - **Themes** — light, dark, and pure-black AMOLED.
 
