@@ -193,6 +193,28 @@ private fun globeFrameRateModifier(): Modifier {
     } else Modifier
 }
 
+private class GlobeBuffers(val bs: Int) {
+    val lut = GlobeLut(bs)
+    val px = IntArray(bs * bs)
+    val bmp = arrayOf(
+        android.graphics.Bitmap.createBitmap(bs, bs, android.graphics.Bitmap.Config.ARGB_8888),
+        android.graphics.Bitmap.createBitmap(bs, bs, android.graphics.Bitmap.Config.ARGB_8888)
+    )
+    val img = arrayOf(bmp[0].asImageBitmap(), bmp[1].asImageBitmap())
+    var front = 0
+}
+
+private object GlobeCache {
+    @Volatile private var cached: GlobeBuffers? = null
+    fun get(bs: Int): GlobeBuffers {
+        cached?.let { if (it.bs == bs) return it }
+        val fresh = GlobeBuffers(bs)
+        cached = fresh
+        return fresh
+    }
+    fun peek(bs: Int): GlobeBuffers? = cached?.takeIf { it.bs == bs }
+}
+
 private const val GLOBE_RENDER_MAX = 512
 private const val GLOBE_RENDER_SCALE = 85
 private const val GLOBE_RAD_FRAC = 0.86
@@ -482,45 +504,38 @@ fun EarthSection(modifier: Modifier = Modifier) {
             val popupHpx = with(density) { 58.dp.toPx() }
 
             val bs = remember(sidePx) { (sidePx.roundToInt() * GLOBE_RENDER_SCALE / 100).coerceIn(96, GLOBE_RENDER_MAX) }
-            var lut by remember(bs) { mutableStateOf<GlobeLut?>(null) }
-            val px = remember(bs) { IntArray(bs * bs) }
-            val bmp = remember(bs) {
-                arrayOf(
-                    android.graphics.Bitmap.createBitmap(bs, bs, android.graphics.Bitmap.Config.ARGB_8888),
-                    android.graphics.Bitmap.createBitmap(bs, bs, android.graphics.Bitmap.Config.ARGB_8888)
-                )
-            }
-            val img = remember(bs) { arrayOf(bmp[0].asImageBitmap(), bmp[1].asImageBitmap()) }
+            var buffers by remember(bs) { mutableStateOf(GlobeCache.peek(bs)) }
+            val lut = buffers?.lut
 
-            var frameImage by remember(bs) { mutableStateOf(img[0]) }
+            var frameImage by remember(bs) { mutableStateOf(buffers?.let { it.img[it.front] }) }
             var renderedSpin by remember { mutableStateOf(Float.NaN) }
             var renderedTilt by remember { mutableStateOf(0f) }
-            var front = remember(bs) { 0 }
 
             LaunchedEffect(Unit) {
                 withContext(Dispatchers.Default) { EarthMask.data }
             }
 
             LaunchedEffect(bs) {
-                delay(350)
-                lut = withContext(Dispatchers.Default) {
-                    EarthMask.data
-                    GlobeLut(bs)
+                if (buffers == null) {
+                    val b = withContext(Dispatchers.Default) { GlobeCache.get(bs) }
+                    buffers = b
+                    if (frameImage == null) frameImage = b.img[b.front]
                 }
             }
 
             LaunchedEffect(bs, lut) {
                 val l = lut ?: return@LaunchedEffect
+                val b = buffers ?: return@LaunchedEffect
                 snapshotFlow { spinY.value to tiltX.value }
                     .conflate()
                     .collect { (s, t) ->
-                        val back = 1 - front
+                        val back = 1 - b.front
                         withContext(Dispatchers.Default) {
-                            renderGlobeParallel(px, l, s, t, true)
-                            bmp[back].setPixels(px, 0, bs, 0, 0, bs, bs)
+                            renderGlobeParallel(b.px, l, s, t, true)
+                            b.bmp[back].setPixels(b.px, 0, bs, 0, 0, bs, bs)
                         }
-                        front = back
-                        frameImage = img[back]
+                        b.front = back
+                        frameImage = b.img[back]
                         renderedSpin = s; renderedTilt = t
                     }
             }
@@ -564,13 +579,16 @@ fun EarthSection(modifier: Modifier = Modifier) {
                     )
                 }
                 Canvas(Modifier.fillMaxSize()) {
-                    drawImage(
-                        image = frameImage,
-                        srcOffset = IntOffset.Zero,
-                        srcSize = IntSize(bs, bs),
-                        dstOffset = IntOffset.Zero,
-                        dstSize = IntSize(sidePx.roundToInt(), sidePx.roundToInt())
-                    )
+                    val fi = frameImage
+                    if (fi != null) {
+                        drawImage(
+                            image = fi,
+                            srcOffset = IntOffset.Zero,
+                            srcSize = IntSize(bs, bs),
+                            dstOffset = IntOffset.Zero,
+                            dstSize = IntSize(sidePx.roundToInt(), sidePx.roundToInt())
+                        )
+                    }
                 }
 
                 Canvas(Modifier.fillMaxSize()) {
