@@ -3,7 +3,7 @@
 *.ap_
 *.dex
 *.class
-app/src/main/java/net/gozar/app/DonationScreen.kt
+DonationScreen.kt
 
 .gradle/
 .kotlin/
