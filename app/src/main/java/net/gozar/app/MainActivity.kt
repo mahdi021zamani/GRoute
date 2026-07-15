@@ -2160,27 +2160,6 @@ private fun SettingsScreen(
             checked = splitRouting,
             onCheckedChange = { store.setSplitRouting(it) }
         )
-        val perAppMode by store.perAppMode.collectAsState()
-        val perAppList by store.perAppList.collectAsState()
-        Card(
-            modifier = Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .clickable { onOpenPerApp() },
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-        ) {
-            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(t("per_app"), style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        perAppSummary(perAppMode, perAppList.size, lang),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Icon(Icons.Filled.ChevronRight, contentDescription = null)
-            }
-        }
         SettingRow(
             title = t("fragment_title"),
             subtitle = t("fragment_sub"),
@@ -2274,6 +2253,28 @@ private fun SettingsScreen(
                     }
                     Icon(Icons.Filled.ChevronRight, contentDescription = null)
                 }
+            }
+        }
+
+        val perAppMode by store.perAppMode.collectAsState()
+        val perAppList by store.perAppList.collectAsState()
+        Card(
+            modifier = Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .clickable { onOpenPerApp() },
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+        ) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(t("per_app"), style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        perAppSummary(perAppMode, perAppList.size, lang),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Icon(Icons.Filled.ChevronRight, contentDescription = null)
             }
         }
 
